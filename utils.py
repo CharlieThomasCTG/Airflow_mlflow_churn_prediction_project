@@ -6,7 +6,7 @@ import time
 from ydata_profiling import ProfileReport
 import sqlite3
 from sqlite3 import Error
-# from pycaret.classification import *
+from pycaret.classification import *
 import os
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
@@ -34,12 +34,40 @@ from datetime import datetime
 from datetime import date
 
 
+# function 1: this function will help us to load the data
 def load_data(file_path_list):
     data = []
     for eachfile in file_path_list:
         data.append(pd.read_csv(eachfile))
     return data
-########################################################################################################################################################################################
+
+def remove_outliers(df):
+    # Start with the original DataFrame
+    cleaned_df = df.copy()
+    
+    for col in cleaned_df.columns:
+        if cleaned_df[col].dtype in ['int', 'float']:
+            # Calculate Q1 (25th percentile) and Q3 (75th percentile)
+            Q1 = cleaned_df[col].quantile(0.25)
+            Q3 = cleaned_df[col].quantile(0.75)
+            IQR = Q3 - Q1
+
+            # Define lower and upper limits
+            lower_limit = Q1 - 1.5 * IQR
+            upper_limit = Q3 + 1.5 * IQR
+
+            # Remove outliers
+            cleaned_df = cleaned_df[(cleaned_df[col] >= lower_limit) & 
+                                    (cleaned_df[col] <= upper_limit)]
+
+    return cleaned_df
+
+
+def convert_float_columns(df):
+    # Convert all float16 columns to float32
+    for col in df.select_dtypes(include=['float16']).columns:
+        df[col] = df[col].astype('float32')
+    return df
 
 def compress_dataframes(list_of_dfs):
     final_df = []
@@ -64,7 +92,6 @@ def compress_dataframes(list_of_dfs):
         final_df.append((eachdf,original_size,compressed_size))
         
     return final_df
-########################################################################################################################################################################################
 
 def count_plot(dataframe, list_of_columns):
     for eachcol in list_of_columns:
@@ -77,7 +104,6 @@ def count_plot(dataframe, list_of_columns):
         plt.ylabel('Count')
         plt.title("Frequency plot of {} Count".format(eachcol))
         plt.show()
-########################################################################################################################################################################################
 
 def fix_time_in_df(dataframe, column_name, expand=False):
     if not expand:
@@ -96,7 +122,7 @@ def fix_time_in_df(dataframe, column_name, expand=False):
       
         return dataframe_new
     
-########################################################################################################################################################################################
+
 
 def get_data_profile(dataframe,html_save_path, 
                      embed_in_cell=True,take_sample=False, sample_frac=0.5, dataframe_name="data"):
@@ -111,14 +137,13 @@ def get_data_profile(dataframe,html_save_path,
         filename = f"{dataframe_name}_data_profile_{timestamp}"
         profile.to_file(html_save_path+filename+".html")
         return "Your Data Profile has been saved at .. ",html_save_path+filename+".html"   
-########################################################################################################################################################################################   
-
+    
 def get_data_describe(dataframe,round_num=2):
     return round(dataframe.describe(),round_num)
-########################################################################################################################################################################################
+
 def get_data_na_values(dataframe, round_num=2):
     return pd.DataFrame({'%missing_values':round(dataframe.isna().sum()/dataframe.shape[0],round_num)})
-########################################################################################################################################################################################
+
 def get_fill_na_dataframe(dataframe, column_name, value='mean'):
     if value != 'mean' and value !='mode':
         return dataframe[column_name].fillna(value)
@@ -128,7 +153,7 @@ def get_fill_na_dataframe(dataframe, column_name, value='mean'):
     elif value == 'mode':
         value = dataframe[column_name].mode()
         return dataframe[column_name].fillna(value)
-########################################################################################################################################################################################
+
 def get_convert_column_dtype(dataframe, column_name, data_type='str'):
     if data_type == 'str':
         return dataframe[column_name].astype('str')
@@ -136,7 +161,7 @@ def get_convert_column_dtype(dataframe, column_name, data_type='str'):
         return dataframe[column_name].astype('int')
     elif data_type == 'float':
         return dataframe[column_name].astype('float')
-########################################################################################################################################################################################    
+    
 def get_groupby(dataframe, by_column, agg_dict=None, agg_func = 'mean', simple_agg_flag=True, reset_index=True):
     if reset_index:
         if simple_agg_flag:
@@ -148,10 +173,10 @@ def get_groupby(dataframe, by_column, agg_dict=None, agg_func = 'mean', simple_a
             return dataframe.groupby(by_column).agg(agg_func)
         else:
             return dataframe.groupby(by_column).agg(agg_dict)
-########################################################################################################################################################################################        
+        
 def get_merge(dataframe1, dataframe2, on, axis=1,how='inner'):
     return dataframe1.merge(dataframe2, on=on,how=how)
-########################################################################################################################################################################################
+
 def get_fix_skew_with_log(dataframe, columns, replace_inf = True, replace_inf_with = 0):
     if replace_inf:
         dataframe_log = np.log(dataframe[columns]).replace([np.inf, -np.inf], replace_inf_with)
@@ -159,20 +184,20 @@ def get_fix_skew_with_log(dataframe, columns, replace_inf = True, replace_inf_wi
     else:
         dataframe_log = np.log(dataframe[columns])
         return pd.concat([dataframe_log, dataframe.drop(columns,axis=1)], axis=1)
-########################################################################################################################################################################################        
+        
 def get_save_intermediate_data(dataframe, path, filename="data_interim"):
     filename = filename+"_"+str(int(time.time()))+".csv"
     dataframe.to_csv(path+filename,index=False)
     return "Data Saved Here :",path+filename
-########################################################################################################################################################################################
+
 def get_label_encoding_dataframe(dataframe, column_name, mapping_dict):
     return dataframe[column_name].map(mapping_dict) 
 # #average_age if (x <=0 or x >100) else x
-########################################################################################################################################################################################
+
 def get_apply_condiiton_on_column(dataframe, column_name, condition):
     return dataframe[column_name].apply(lambda x :eval(condition))
 
-########################################################################################################################################################################################
+
 def get_two_column_operations(dataframe, columns_1, columns_2, operator):
     if operator == "+":
         return dataframe[columns_1]+dataframe[columns_2]
@@ -182,13 +207,13 @@ def get_two_column_operations(dataframe, columns_1, columns_2, operator):
         return dataframe[columns_1]/dataframe[columns_2]
     elif operator == "*":
         return dataframe[columns_1]*dataframe[columns_2]
-########################################################################################################################################################################################    
+    
 def get_timedelta_division(dataframe, column, td_type='D'):
     return dataframe[column] /np.timedelta64(1,td_type)
-########################################################################################################################################################################################
+
 def get_replace_value_in_df(dataframe, column, value, replace_with):
     return dataframe[column].replace(value,replace_with) 
-########################################################################################################################################################################################
+
 def get_validation_unseen_set(dataframe, validation_frac=0.05, sample=False, sample_frac=0.1):
     if not sample:
         dataset = dataframe.copy()
@@ -199,7 +224,7 @@ def get_validation_unseen_set(dataframe, validation_frac=0.05, sample=False, sam
     data.reset_index(inplace=True, drop=True)
     data_unseen.reset_index(inplace=True, drop=True)
     return data, data_unseen
-########################################################################################################################################################################################
+
 def create_sqlit_connection(db_path,db_file):
     """ create a database connection to a SQLite database """
     conn = None
@@ -214,7 +239,7 @@ def create_sqlit_connection(db_path,db_file):
     finally:
         if conn:
             conn.close()
-########################################################################################################################################################################################            
+            
             
 #{'pycaret_globals', '_all_models_internal', 'y', 'iterative_imputation_iters_param', 
 # #'seed', 'imputation_regressor', 'display_container', 'logging_param', '_available_plots',
@@ -233,18 +258,16 @@ def get_train_test_set_from_setup():
             get_config(variable="y_train"),\
             get_config(variable="X_test"),\
             get_config(variable="y_test")
-########################################################################################################################################################################################
+
 def get_x_y_from_setup():
     return get_config(variable="X"),\
             get_config(variable="y")
-########################################################################################################################################################################################
+
 def get_transformation_pipeline_from_setup():
-    return get_config(variable="prep_pipe")
-
-
+    return get_config(variable="pipeline")
 
 # Pipeline Functions 
-########################################################################################################################################################################################
+
 def check_if_table_has_value(cnx,table_name):
     # cnx = sqlite3.connect(db_path+db_file_name)
     check_table = pd.read_sql(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}';", cnx).shape[0]
@@ -252,7 +275,7 @@ def check_if_table_has_value(cnx,table_name):
         return True
     else:
         return False
-########################################################################################################################################################################################    
+    
 def build_dbs(db_path,db_file_name):
     if os.path.isfile(db_path+db_file_name):
         print( "DB Already Exsist")
@@ -273,7 +296,7 @@ def build_dbs(db_path,db_file_name):
             if conn:
                 conn.close()
                 return "DB Created"
-########################################################################################################################################################################################
+
 def get_new_data_appended(old_data_directory,new_data_directory, start_data, end_date,append=False):
     user_logs_n, transactions_n  = load_data( [f"{new_data_directory}user_logs_new.csv",
                                                f"{new_data_directory}transactions_logs_new.csv",
@@ -314,7 +337,7 @@ def get_new_data_appended(old_data_directory,new_data_directory, start_data, end
         user_logs_combined = user_logs.append(march_user_logs)
         transactions_combined = transactions.append(march_transactions)
         return user_logs_combined, transactions_combined
-########################################################################################################################################################################################
+
 def load_data_from_source(db_path,db_file_name,drfit_db_name, 
                           old_data_directory,new_data_directory,
                           run_on='old',start_data='2017-03-01', end_date='2017-03-31',
@@ -464,7 +487,7 @@ def load_data_from_source(db_path,db_file_name,drfit_db_name,
                 
     else:
         print("Skipping.....Not required")
-########################################################################################################################################################################################
+
 def get_membership_data_transform(db_path,db_file_name,drfit_db_name):
     cnx = sqlite3.connect(db_path+db_file_name)
     cnx_drift = sqlite3.connect(db_path+drfit_db_name)
@@ -491,7 +514,7 @@ def get_membership_data_transform(db_path,db_file_name,drfit_db_name):
         return "Membership Data is already Transformed and Saved into members_final"
     else:
         print("Not Required......Skipping") 
-########################################################################################################################################################################################
+
 def get_transaction_data_transform(db_path,db_file_name,drfit_db_name):
     cnx = sqlite3.connect(db_path+db_file_name)
     cnx_drift = sqlite3.connect(db_path+drfit_db_name)
@@ -550,7 +573,7 @@ def get_transaction_data_transform(db_path,db_file_name,drfit_db_name):
 
     else:
         print("Not Required......Skipping") 
-########################################################################################################################################################################################
+
 def get_user_data_transform(db_path,db_file_name,drfit_db_name):
     cnx = sqlite3.connect(db_path+db_file_name)
     cnx_drift = sqlite3.connect(db_path+drfit_db_name)
@@ -584,7 +607,7 @@ def get_user_data_transform(db_path,db_file_name,drfit_db_name):
     else:
         print("Not Required......Skipping")
 
-########################################################################################################################################################################################
+
 def get_final_data_merge(db_path,db_file_name,drfit_db_name):
     
     cnx = sqlite3.connect(db_path+db_file_name)
@@ -613,85 +636,90 @@ def get_final_data_merge(db_path,db_file_name,drfit_db_name):
     else:
         print("Not Required......Skipping")
 
-########################################################################################################################################################################################
-def get_data_prepared_for_modeling(db_path,db_file_name,drfit_db_name, scale_method='standard',date_columns=None,corr_threshold=0.90,drop_corr=False,
-                                   date_transformation=True):
-  # print(len(dataframe.columns))
-  # removingmulti-colinearity 
-    cnx = sqlite3.connect(db_path+db_file_name)
-    
-    cnx_drift = sqlite3.connect(db_path+drfit_db_name)
+
+import pandas as pd
+import numpy as np
+import sqlite3
+from sklearn.preprocessing import StandardScaler
+
+def get_data_prepared_for_modeling(db_path, db_file_name, drfit_db_name, scale_method='standard', date_columns=None, corr_threshold=0.90, drop_corr=False,
+                                    date_transformation=True):
+    cnx = sqlite3.connect(db_path + db_file_name)
+    cnx_drift = sqlite3.connect(db_path + drfit_db_name)
     process_flags = pd.read_sql('select * from process_flags', cnx_drift)
-    
+
     if process_flags['Data_Preparation'][0] == 1:
-        if not check_if_table_has_value(cnx,'X') and not check_if_table_has_value(cnx,'y'):
+        if not check_if_table_has_value(cnx, 'X') and not check_if_table_has_value(cnx, 'y'):
             dataframe = pd.read_sql('select * from final_features_v01', cnx)
+
+            # Select only numeric columns for correlation calculation
+            numeric_dataframe = dataframe.select_dtypes(include=[np.number])
+
             # Create correlation matrix
-            corr_matrix = dataframe.corr().abs()
+            corr_matrix = numeric_dataframe.corr().abs()
             # Select upper triangle of correlation matrix
-            upper = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(np.bool))
-            # Find features with correlation greater than 0.95
+            upper = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(bool))
+
+            # Find features with correlation greater than the specified threshold
             to_drop = [column for column in upper.columns if any(upper[column] > corr_threshold)]
-            print(to_drop)
-            # Drop feature
+            print("Dropping columns with high correlation:", to_drop)
+
+            # Drop features if specified
             if drop_corr:
                 dataframe.drop(to_drop, axis=1, inplace=True)
-            print(len(dataframe.columns))
-            if date_transformation:
-                #date transformation 
-                features = ["day","month","year","weekday"]
-                date_data = dataframe[date_columns]
+
+            print("Remaining columns after dropping:", len(dataframe.columns))
+
+            if date_transformation and date_columns is not None:
+                # Date transformation
+                features = ["day", "month", "year", "weekday"]
+                date_data = dataframe[date_columns].copy()
+
                 for eachcol in date_data:
-                    date_data[eachcol] = date_data[eachcol].astype('str')
-                    date_data[eachcol] = pd.to_datetime(date_data[eachcol]) 
-                    #column_name
+                    date_data[eachcol] = pd.to_datetime(date_data[eachcol], errors='coerce')  # Convert to datetime
+                    # Extract features
                     for eachfeature in features:
                         col_name = f"{eachcol}_{eachfeature}"
-
                         if eachfeature == 'day':
                             date_data[col_name] = date_data[eachcol].dt.day
                         elif eachfeature == 'month':
                             date_data[col_name] = date_data[eachcol].dt.month
-                          # result[col_name] = result[col_name].astype('int64')
                         elif eachfeature == 'year':
                             date_data[col_name] = date_data[eachcol].dt.year
-                          # result[col_name] = result[col_name].astype('int64')
                         elif eachfeature == 'weekday':
                             date_data[col_name] = date_data[eachcol].dt.weekday
-                date_data.drop(date_columns,axis=1,inplace=True)
-                date_data = date_data.where(date_data.isna(), date_data.astype(str))
-                final_date = pd.get_dummies(date_data, drop_first=True,dtype='int16')
-            # print(pd.get_dummies(date_data, drop_first=True,dtype='int16')) 
+                date_data.drop(date_columns, axis=1, inplace=True)
+                final_date = pd.get_dummies(date_data, drop_first=True, dtype='int16')
 
-            #scaling
-            column_to_scale = dataframe.select_dtypes(include=['float64','int64']).columns.drop('is_churn')
+            # Scaling
+            column_to_scale = dataframe.select_dtypes(include=['float64', 'int64','float32']).columns.drop('is_churn')
             transformer = StandardScaler().fit(dataframe[column_to_scale])
-            scaled_data = pd.DataFrame(transformer.transform(dataframe[column_to_scale]),columns=column_to_scale)
+            scaled_data = pd.DataFrame(transformer.transform(dataframe[column_to_scale]), columns=column_to_scale)
 
-            #Combining
+            # Combining
             if date_transformation:
-                final_df = pd.concat([scaled_data,final_date,dataframe['is_churn']],axis=1)
+                final_df = pd.concat([scaled_data, final_date, dataframe['is_churn']], axis=1)
             else:
-                print("Doing Feature without Dates") 
-                final_df = pd.concat([scaled_data,dataframe['is_churn']],axis=1)
-                # final_df = final_df.drop(date_columns,axis=1)
+                print("Doing Feature without Dates")
+                final_df = pd.concat([scaled_data, dataframe['is_churn']], axis=1)
 
-            #Splitting X,y 
-            X = final_df.drop(['is_churn'],axis=1)
+            # Splitting X, y
+            X = final_df.drop(['is_churn'], axis=1)
             y = final_df[['is_churn']]
             index_df = dataframe[['msno']]
             index_df['index_for_map'] = index_df.index
-            
-            X.to_sql(name='X', con=cnx,if_exists='replace',index=False)
-            y.to_sql(name='y', con=cnx,if_exists='replace',index=False)
-            index_df.to_sql(name='index_msno_mapping', con=cnx,if_exists='replace',index=False)
-            return "X & Y written on database"
+
+            # Writing to SQL
+            X.to_sql(name='X', con=cnx, if_exists='replace', index=False)
+            y.to_sql(name='y', con=cnx, if_exists='replace', index=False)
+            index_df.to_sql(name='index_msno_mapping', con=cnx, if_exists='replace', index=False)
+            return "X & Y written in the database"
         else:
-            return "X & Y Already exsist in Data."
-    
+            return "X & Y already exist in Data."
     else:
-        print("Not Required......Skipping")
-########################################################################################################################################################################################
+        print("Not Required... Skipping")
+
+
 
 def get_train_model(db_path,db_file_name,drfit_db_name):
     cnx_drift = sqlite3.connect(db_path+drfit_db_name)
@@ -781,7 +809,7 @@ def get_train_model(db_path,db_file_name,drfit_db_name):
     else:
         print("Not Required......Skipping")
 
-########################################################################################################################################################################################
+
 def get_train_model_hptune(db_path,db_file_name,drfit_db_name):
     cnx_drift = sqlite3.connect(db_path+drfit_db_name)
     process_flags = pd.read_sql('select * from process_flags', cnx_drift)
@@ -879,7 +907,7 @@ def get_train_model_hptune(db_path,db_file_name,drfit_db_name):
             
     else:
         print("Not Required......Skipping")
-########################################################################################################################################################################################    
+    
 
 #'runs:/e220f226ee624a79996e049c81924ec1/models' example:
 def get_predict(db_path,db_file_name,ml_flow_path,drfit_db_name):
@@ -910,7 +938,7 @@ def get_predict(db_path,db_file_name,ml_flow_path,drfit_db_name):
     else:
         print("Not Required......Skipping")
 
-########################################################################################################################################################################################
+
 def get_change(current, previous):
     if current == previous:
         return 0
@@ -920,7 +948,7 @@ def get_change(current, previous):
         return float('inf')
     except TypeError:
         return 0
-########################################################################################################################################################################################    
+    
 def get_reset_process_flags():
     return {
             'load_data': 0,
@@ -934,7 +962,7 @@ def get_reset_process_flags():
             'Prediction':0
            }
 
-########################################################################################################################################################################################
+
 def get_reset_process_flags_flip():
     return {
             'load_data': 1,
@@ -947,7 +975,7 @@ def get_reset_process_flags_flip():
             'Model_Training_hpTunning':1,
             'Prediction':1
            }
-########################################################################################################################################################################################
+
 def get_flush_db_process_flags(db_path,drfit_db_name,flip=True):
     if flip:
         cnx = sqlite3.connect(db_path+drfit_db_name)
@@ -959,11 +987,11 @@ def get_flush_db_process_flags(db_path,drfit_db_name,flip=True):
         process_flags = get_reset_process_flags()
         process_flags_df = pd.DataFrame(process_flags,index=[0])
         process_flags_df.to_sql(name='process_flags', con=cnx, if_exists='replace', index=False)
-########################################################################################################################################################################################
+
 def get_difference(df):
     percnt_df = get_change(df['new'], df['old'])
     return percnt_df
-########################################################################################################################################################################################    
+    
 def get_data_drift(current_data, old_data, column_list,exclude_list, cnx, metric='std'):
     drift_dict = {}
     drift_dict['old'] = {}
@@ -1000,87 +1028,89 @@ def get_data_drift(current_data, old_data, column_list,exclude_list, cnx, metric
         return np.mean(std_deviation_percentage)
     elif metric == 'mean':
         return np.mean(mean_deviation_percentage)
-########################################################################################################################################################################################
-def get_drift(old_data_directory,new_data_directory,db_path,drfit_db_name,
-              metric='std', start_data='2017-03-01', end_date='2017-03-31'):
-    
-    cnx = sqlite3.connect(db_path+drfit_db_name)
-    
-    #New Data 
-    march_user_logs, march_transactions = get_new_data_appended(old_data_directory,new_data_directory, start_data, end_date)
-    march_user_logs, pre_size, post_size = compress_dataframes([march_user_logs])[0]
-    march_transactions, pre_size, post_size = compress_dataframes([march_transactions])[0]
+#######################################################################################################################################################
+import pandas as pd
+import sqlite3
 
-    #Old Data 
-    transactions = load_data( [f"{old_data_directory}transactions_logs.csv",
-                       ]
-                     )[0]
-    transactions['transaction_date'] = fix_time_in_df(transactions, 'transaction_date', expand=False)
-    transactions['membership_expire_date'] = fix_time_in_df(transactions, 'membership_expire_date', expand=False)
+def get_drift(old_data_directory, new_data_directory, db_path, drift_db_name,
+              metric='std', start_data='2017-03-01', end_date='2017-03-31', chunk_size=50000):
+    
+    # Establish a connection to the SQLite database using a context manager
+    with sqlite3.connect(db_path + drift_db_name) as cnx:
+        
+        # Load new data using chunk processing
+        march_user_logs = []
+        march_transactions = []
+        
+        for chunk in pd.read_csv(f"{new_data_directory}user_logs_new.csv", chunksize=chunk_size):
+            march_user_logs.append(chunk)
+        
+        for chunk in pd.read_csv(f"{new_data_directory}transactions_logs_new.csv", chunksize=chunk_size):
+            march_transactions.append(chunk)
+        
+        # Concatenate chunks into final dataframes
+        march_user_logs = pd.concat(march_user_logs, ignore_index=True)
+        march_transactions = pd.concat(march_transactions, ignore_index=True)
+        
+        # Compress dataframes to reduce memory usage
+        march_user_logs, _, _ = compress_dataframes([march_user_logs])[0]
+        march_transactions, _, _ = compress_dataframes([march_transactions])[0]
 
-    
-    user_logs = load_data( [f"{old_data_directory}userlogs.csv",
-                       ]
-                     )[0]
-    user_logs['date'] = fix_time_in_df(user_logs, 'date', expand=False)
-    
-    transactions, pre_size, post_size = compress_dataframes([transactions])[0]
-    user_logs, pre_size, post_size = compress_dataframes([user_logs])[0]
+        # Load old data in chunks and compress
+        transactions = []
+        user_logs = []
+        
+        for chunk in pd.read_csv(f"{old_data_directory}transactions_logs.csv", chunksize=chunk_size):
+            transactions.append(chunk)
+        
+        for chunk in pd.read_csv(f"{old_data_directory}userlogs.csv", chunksize=chunk_size):
+            user_logs.append(chunk)
+        
+        # Concatenate chunks into final dataframes
+        transactions = pd.concat(transactions, ignore_index=True)
+        user_logs = pd.concat(user_logs, ignore_index=True)
+        
+        # Apply time fixes to the necessary columns
+        transactions['transaction_date'] = fix_time_in_df(transactions, 'transaction_date', expand=False)
+        transactions['membership_expire_date'] = fix_time_in_df(transactions, 'membership_expire_date', expand=False)
+        user_logs['date'] = fix_time_in_df(user_logs, 'date', expand=False)
+        
+        # Compress old dataframes to reduce memory usage
+        transactions, _, _ = compress_dataframes([transactions])[0]
+        user_logs, _, _ = compress_dataframes([user_logs])[0]
+        
+        # Select columns for drift analysis (only numerical)
+        column_list_tran = list(transactions.select_dtypes(include=['int8', 'int16', 'int32', 'float16']).columns)
+        column_list_userlogs = list(user_logs.select_dtypes(include=['int8', 'int16', 'int32', 'float16']).columns)
+        
+        # Define columns to exclude from drift calculation
+        exclude_list_tran = ['date'] 
+        exclude_list_user_log = ['transaction_date', 'membership_expire_date']
+        
+        # Compute data drift with minimal memory overhead by chunk processing
+        user_logs_drift = get_data_drift(march_user_logs, user_logs, column_list_userlogs, exclude_list_user_log, cnx, metric=metric)
+        transactions_drift = get_data_drift(march_transactions, transactions, column_list_tran, exclude_list_tran, cnx, metric=metric)
+        
+        # Display drift results
+        print(f"User Logs Data Drift ({metric}): {user_logs_drift}")
+        print(f"Transaction Data Drift ({metric}): {transactions_drift}")
+        
+        # Create a DataFrame to store the drift results
+        drift = pd.DataFrame({
+            'drift_userlog': [user_logs_drift],
+            'drift_transaction': [transactions_drift]
+        })
+        
+        # Save drift results to the SQLite database
+        drift.to_sql(name='drift', con=cnx, if_exists='replace', index=False)
+        print(f"Writing to Database Done at {db_path + drift_db_name}")
+        
+        # Trigger any post-processing actions
+        get_drift_trigger(db_path, drift_db_name)
 
-    #Print Statements
-    column_list_tran = list(transactions.select_dtypes(include=['int8','int16','int32','float16']).columns)
-    print(column_list_tran)
-    column_list_userlogs = list(user_logs.select_dtypes(include=['int8','int16','int32','float16']).columns)
-    print(column_list_tran)
-    exclude_list_tran = ['date'] 
-    exclude_list_user_log = ['transaction_date','membership_expire_date']
-    print("User Logs Data Drift as ", metric, " is: ", get_data_drift(march_user_logs, user_logs, column_list_userlogs,exclude_list_user_log, cnx, metric='std'))
-    print("Transaction Data Drift as ", metric, " is: ", get_data_drift(march_transactions, transactions, column_list_tran,exclude_list_tran, cnx,  metric='std'))
-    
-    # drift = pd.DataFrame(
-    #                 {
-    #             'drift_userlog': get_data_drift(march_user_logs, user_logs, column_list_userlogs,exclude_list_user_log, cnx, metric),
-    #             'drift_transaction':get_data_drift(march_transactions, transactions, column_list_tran,exclude_list_tran, cnx, metric)
-    #                 },
-    #                 index=[0]
-    #                     )
-    # print(drift)
-    
-    #to test other metric 
-#     drift = pd.DataFrame(
-#                     {
-#                 'drift_userlog': 5.6,
-#                 'drift_transaction':7.8
-#                     },
-#                     index=[0]
-#                         )
-    
-#     drift = pd.DataFrame(
-#                     {
-#                 'drift_userlog': 24.5,
-#                 'drift_transaction':28.30
-#                     },
-#                     index=[0]
-#                         )
-    
-    drift = pd.DataFrame(
-                    {
-                'drift_userlog': 50.0,
-                'drift_transaction':48.0
-                    },
-                    index=[0]
-                        )
-    
-    # Save this in Database 
-    
-    print(drift)
-    #Building & Checking Databases
-    # build_dbs(db_path, drfit_db_name)
-    drift.to_sql(name='drift', con=cnx, if_exists='replace', index=False)
-    print("Writing to Database Done... at", db_path+drfit_db_name)
-    get_drift_trigger(db_path, drfit_db_name)
 
-########################################################################################################################################################################################
+##########################################################################################################################################################
+
 def get_drift_trigger(db_path, drfit_db_name):
     cnx = sqlite3.connect(db_path+drfit_db_name)
     
