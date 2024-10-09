@@ -1,23 +1,6 @@
 #pip install scikit-optimize
 # Building the DAG using the functions from data_process and model module
-import datetime as dt
-from airflow import DAG
-from airflow.operators.python import PythonOperator
-from airflow.operators.email_operator import EmailOperator
-from airflow.utils.dates import days_ago
-#from constants_drift import *
-import os 
-import sqlite3
-from sqlite3 import Error
-import pandas as pd
-import importlib.util
-import warnings
-warnings.filterwarnings('ignore')
-from datetime import datetime
-from datetime import date
-import mlflow
-import mlflow.sklearn
-import utils
+
 
 import os
 import sys
@@ -51,6 +34,28 @@ def change_directory(current_directory, new_directory,scripts_path):
     
 change_directory(current_directory, new_directory, scripts_path)
 
+
+import datetime as dt
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+from airflow.operators.email_operator import EmailOperator
+from airflow.utils.dates import days_ago
+#from constants_drift import *
+import os 
+import sqlite3
+from sqlite3 import Error
+import pandas as pd
+import importlib.util
+import warnings
+warnings.filterwarnings('ignore')
+from datetime import datetime
+from datetime import date
+import mlflow
+import mlflow.sklearn
+import utils
+from datetime import timedelta
+
+
 # Setting up all directory
 root_folder = "/home/charliethomasctg/airflow"
 database_path = root_folder+"/database/"
@@ -69,11 +74,13 @@ db_path = root_folder+"/database/"
 db_file_name = "feature_store_v01.db"
 drfit_db_name = "drift_db_name.db"
 date_columns = ['registration_init_time','transaction_date_min','transaction_date_max','membership_expire_date_max','last_login']
-
+drift_db_name = "drift_db_name.db"
 
 # Mlflow
 mlflow_tracking_uri = "http://0.0.0.0:6007"
-ml_flow_path = "runs:/2/cb66e22bcbf74ded99dc219eb29e7609/"
+ml_flow_model_path = root_folder+ "/mlruns/2/cb66e22bcbf74ded99dc219eb29e7609/artifacts/models/"
+ml_flow_path = root_folder+ "/mlruns/2/cb66e22bcbf74ded99dc219eb29e7609"
+
 run_on = "old" #"old"
 append=False
 date_transformation = False
@@ -146,12 +153,11 @@ op_get_drift_data = PythonOperator(task_id='get_drift',
                             op_kwargs={'old_data_directory':old_data_directory,
                                              'new_data_directory':new_data_directory,
                                        'db_path': db_path,
-                                       'drfit_db_name':drfit_db_name,
+                                       'drift_db_name':drift_db_name,
                                        'metric':metric,
                                        'start_date':start_date,
-                                             'end_date':end_date,
-                                       },
-                                    dag=dag)
+                                             'end_date':end_date,'chunk_size':50000},
+                            dag=dag)
 
 op_load_data = PythonOperator(task_id='load_data', 
                                 python_callable=utils.load_data_from_source,
@@ -254,6 +260,7 @@ else:
 
 op_reset_processes_flags.set_downstream(op_create_db)
 op_create_db.set_downstream(op_create_db_2)
+#op_create_db_2.set_downstream(op_load_data)
 op_create_db_2.set_downstream(op_get_drift_data)
 op_get_drift_data.set_downstream(op_load_data)
 op_load_data.set_downstream([op_process_members,op_process_userlogs,op_process_transactions])
