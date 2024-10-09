@@ -68,8 +68,8 @@ date_columns = ['registration_init_time','transaction_date_min','transaction_dat
 
 # Mlflow
 mlflow_tracking_uri = "http://0.0.0.0:6007"
-ml_flow_model_path = root_folder+ "/mlruns/2/cb66e22bcbf74ded99dc219eb29e7609/artifacts/models/model.pkl"
-ml_flow_path = root_folder+ "/mlruns/2/cb66e22bcbf74ded99dc219eb29e7609/artifacts/models/model.pkl"
+ml_flow_model_path = root_folder+ "/mlruns/2/cb66e22bcbf74ded99dc219eb29e7609/artifacts/models/"
+ml_flow_path = root_folder+ "/mlruns/2/cb66e22bcbf74ded99dc219eb29e7609"
 run_on = "new" #"old"
 append=False
 date_transformation = False
