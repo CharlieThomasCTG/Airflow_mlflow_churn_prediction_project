@@ -72,7 +72,7 @@ date_columns = ['registration_init_time','transaction_date_min','transaction_dat
 
 
 # Mlflow
-mlflow_tracking_uri = "http://0.0.0.0:6007"
+mlflow_tracking_uri = "http://0.0.0.0:6006"
 ml_flow_path = "runs:/2b26c1f389b3485bb44b17cf85681cb6/models"
 run_on = "old" #"old"
 append=False

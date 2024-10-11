@@ -77,7 +77,7 @@ date_columns = ['registration_init_time','transaction_date_min','transaction_dat
 drift_db_name = "drift_db_name.db"
 
 # Mlflow
-mlflow_tracking_uri = "http://0.0.0.0:6007"
+mlflow_tracking_uri = "http://0.0.0.0:6006"
 ml_flow_model_path = root_folder+ "/mlruns/2/cb66e22bcbf74ded99dc219eb29e7609/artifacts/models/"
 ml_flow_path = root_folder+ "/mlruns/2/cb66e22bcbf74ded99dc219eb29e7609"
 
