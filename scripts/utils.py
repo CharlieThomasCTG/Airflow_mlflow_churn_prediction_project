@@ -1,41 +1,64 @@
+###############################################################################################################################################################################
+###############################################################################################################################################################################
+#Import all necessary libraries
+# Data Manipulation and Analysis Libraries
 import pandas as pd
 import numpy as np
+
+# Data Visualization Libraries
 import matplotlib.pyplot as plt
 import seaborn as sns
-import time
+
+# Profiling and Reporting Library
 from ydata_profiling import ProfileReport
+
+# Database Interaction Library
 import sqlite3
 from sqlite3 import Error
+
+# Machine Learning Libraries
 from pycaret.classification import *
-import os
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report
-from sklearn.metrics import confusion_matrix
-from sklearn.metrics import accuracy_score
 import lightgbm as lgb
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report
-from sklearn.metrics import confusion_matrix
-from sklearn.metrics import accuracy_score
-import lightgbm as lgb
-import sklearn
+from sklearn.model_selection import train_test_split, GridSearchCV, StratifiedKFold
+from sklearn.metrics import (classification_report, confusion_matrix,
+                             accuracy_score, precision_score, recall_score,
+                             precision_recall_fscore_support, f1_score)
+
+# Scaling Library
 from sklearn.preprocessing import StandardScaler
-import pickle 
-from sklearn.model_selection import GridSearchCV
-from sklearn.model_selection import StratifiedKFold
-from skopt import BayesSearchCV # run pip install scikit-optimize
+
+# Model Optimization Library
+from skopt import BayesSearchCV 
+
+# Experiment Tracking Library
 import mlflow
 import mlflow.sklearn
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import precision_score, recall_score
-from sklearn.metrics import precision_recall_fscore_support
-from sklearn.metrics import f1_score
-from datetime import datetime
-from datetime import date
+
+# Other Utility Libraries
+import os
+import sys
+import pickle
+from datetime import datetime, date
 import logging
 import requests
-from typing import Optional,Dict
+from typing import Optional, Dict
+import time
+import json
 
+# Airflow Libraries for Orchestration
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+from airflow.operators.email_operator import EmailOperator
+from airflow.utils.dates import days_ago
+
+# Suppress Warnings
+import warnings
+warnings.filterwarnings('ignore')
+
+# Import streamlit library
+import streamlit as st
+
+###############################################################################################################################################################################
 ###############################################################################################################################################################################
 
 import pandas as pd
